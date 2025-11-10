@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: ticket-websocket
+    env: node
+    buildCommand: npm install
+    startCommand: node websocket-server.js
+    envVars:
+      - key: WS_PORT
+        value: 3001
+      - key: CORS_ORIGIN
+        value: https://metin35.com
+      - key: DB_HOST
+        value: 213.199.44.194
+      - key: DB_PORT
+        value: 3306
+      - key: DB_USER
+        value: panel
+      - key: DB_PASS
+        value: Free2play++
+      - key: DB_NAME
+        value: account
