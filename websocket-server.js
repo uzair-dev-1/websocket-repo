@@ -140,17 +140,16 @@ io.on('connection', (socket) => {
    * Send a message in a ticket
    */
   socket.on('send_message', async (data) => {
-    const { ticketId, userId, username, text, sender } = data;
+    const { ticketId, userId, username, text, sender, image_url } = data;
     const roomName = `ticket_${ticketId}`;
     
     try {
       const connection = await pool.getConnection();
-      
       try {
-        // Insert message into database
+        // Insert message into database (with optional image_url)
         const [result] = await connection.execute(
-          'INSERT INTO ticket_messages (ticket_id, sender, account_id, text) VALUES (?, ?, ?, ?)',
-          [ticketId, sender, userId, text]
+        'INSERT INTO ticket_messages (ticket_id, sender, account_id, text, image_url) VALUES (?, ?, ?, ?, ?)',
+          [ticketId, sender, userId, text || '', image_url || null]
         );
         
         const messageId = result.insertId;
@@ -170,6 +169,7 @@ io.on('connection', (socket) => {
           sender: message.sender,
           username: message.username,
           text: message.text,
+          image_url: message.image_url,
           created_at: message.created_at
         });
         
@@ -215,19 +215,8 @@ io.on('connection', (socket) => {
             
             log(`Notified ticket #${ticketId} owner about new admin message (${ownerSockets.length} connections)`);
             
-            // Send SMS notification if requested and phone is available
-            if (ticket.sms_requested && ticket.phone) {
-              try {
-                const smsResult = await sendNewMessageSMS(ticket.phone, ticketId, 'Admin');
-                if (smsResult.success) {
-                  log(`SMS sent to ticket #${ticketId} owner: ${ticket.phone}`);
-                } else {
-                  log(`SMS failed for ticket #${ticketId}: ${smsResult.error}`);
-                }
-              } catch (smsError) {
-                log(`SMS error for ticket #${ticketId}:`, smsError);
-              }
-            }
+            // DO NOT send automatic SMS - admin will send manually
+            // SMS will only be sent when admin clicks "Send SMS" button
           }
         }
         
