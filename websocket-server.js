@@ -373,6 +373,33 @@ io.on('connection', (socket) => {
 // ============================================================================
 
 /**
+ * Get ticket status (lightweight endpoint for quick status check)
+ */
+app.get('/api/ticket/:ticketId/status', async (req, res) => {
+  const { ticketId } = req.params;
+  
+  try {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [tickets] = await connection.execute(
+        `SELECT status FROM tickets WHERE id = ?`,
+        [ticketId]
+      );
+      
+      const ticketStatus = tickets.length > 0 ? tickets[0].status : null;
+      
+      res.json({ success: true, status: ticketStatus });
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    log('Error fetching ticket status:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch ticket status' });
+  }
+});
+
+/**
  * Get messages for a ticket
  */
 app.get('/api/messages/:ticketId', async (req, res) => {
@@ -382,6 +409,7 @@ app.get('/api/messages/:ticketId', async (req, res) => {
     const connection = await pool.getConnection();
     
     try {
+      // Get messages
       const [messages] = await connection.execute(
         `SELECT tm.*, a.login as username 
          FROM ticket_messages tm 
@@ -391,7 +419,15 @@ app.get('/api/messages/:ticketId', async (req, res) => {
         [ticketId]
       );
       
-      res.json({ success: true, messages });
+      // Get ticket status
+      const [tickets] = await connection.execute(
+        `SELECT status FROM tickets WHERE id = ?`,
+        [ticketId]
+      );
+      
+      const ticketStatus = tickets.length > 0 ? tickets[0].status : null;
+      
+      res.json({ success: true, messages, ticketStatus });
     } finally {
       connection.release();
     }
